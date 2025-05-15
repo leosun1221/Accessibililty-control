@@ -1,0 +1,44 @@
+import html2canvas from "html2canvas";
+
+async function compareDesignWithUI(designImage) {
+  // Capture the UI screenshot
+  const uiCanvas = await html2canvas(document.querySelector("#ui-container"));
+  const uiContext = uiCanvas.getContext("2d");
+
+  // Load the design image
+  const designCanvas = document.createElement("canvas");
+  const designContext = designCanvas.getContext("2d");
+  const image = new Image();
+  image.src = designImage;
+  await new Promise((resolve) => (image.onload = resolve));
+  
+  designCanvas.width = uiCanvas.width;
+  designCanvas.height = uiCanvas.height;
+  designContext.drawImage(image, 0, 0, uiCanvas.width, uiCanvas.height);
+
+  // Create a difference canvas
+  const diffCanvas = document.createElement("canvas");
+  diffCanvas.width = uiCanvas.width;
+  diffCanvas.height = uiCanvas.height;
+  const diffContext = diffCanvas.getContext("2d");
+
+  const uiData = uiContext.getImageData(0, 0, uiCanvas.width, uiCanvas.height);
+  const designData = designContext.getImageData(0, 0, designCanvas.width, designCanvas.height);
+  const diffData = diffContext.createImageData(uiCanvas.width, uiCanvas.height);
+
+  // Compare each pixel
+  for (let i = 0; i < uiData.data.length; i += 4) {
+    const isDifferent = 
+      uiData.data[i] !== designData.data[i] ||
+      uiData.data[i + 1] !== designData.data[i + 1] ||
+      uiData.data[i + 2] !== designData.data[i + 2];
+    
+    if (isDifferent) {
+      diffData.data[i] = 255; // Red
+      diffData.data[i + 3] = 255; // Full opacity
+    }
+  }
+
+  diffContext.putImageData(diffData, 0, 0);
+  document.body.appendChild(diffCanvas); // Show the diff canvas
+}
